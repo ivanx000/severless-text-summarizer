@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless Text Summarizer
+Globals:
+  Function:
+    Timeout: 10
+    Runtime: python3.9
+    MemorySize: 512
+Resources:
+  SummariesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: summaries
+      AttributeDefinitions:
+      - AttributeName: id
+        AttributeType: S
+      KeySchema:
+      - AttributeName: id
+        KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+  SummarizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: summarizer-function
+      Handler: app.lambda_handler
+      CodeUri: SummarizerFunction
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: SummariesTable
+      Environment:
+        Variables:
+          TABLE_NAME:
+            Ref: SummariesTable
+      Events:
+        SummarizeApi:
+          Type: Api
+          Properties:
+            Path: /summarize
+            Method: post
+    Metadata:
+      SamResourceId: SummarizerFunction
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint
+    Value:
+      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/summarize
